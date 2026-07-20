@@ -1,0 +1,13 @@
+body
+{
+    font-family: sans-serif;
+    text-align: center;
+    background: #05070d;
+    color: #ddd;
+}
+
+canvas
+{
+    background: #05070d;
+    border: 1px solid #333;
+}
