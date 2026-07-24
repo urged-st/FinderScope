@@ -7,16 +7,24 @@
 </head>
 <body>
 
-<h1>finderscope v2: camera + neighbours</h1>
+<h1>finderscope v4: drag to pan</h1>
 
 <canvas id="skyCanvas" width="700" height="700"></canvas>
 
+<div>
+    <label><input type="radio" name="difficulty" value="easy" checked> easy</label>
+    <label><input type="radio" name="difficulty" value="medium"> medium</label>
+    <label><input type="radio" name="difficulty" value="hard"> hard</label>
+</div>
+
+<input type="text" id="guessInput" placeholder="name the constellation">
+<button id="guessBtn">guess</button>
+<button id="newRoundBtn">new round</button>
+
+<p id="feedback"></p>
 <p id="label"></p>
-<button id="rerollBtn">reroll (test only)</button>
 
 <script src="data.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
-
-
