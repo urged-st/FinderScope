@@ -3,26 +3,95 @@
 <head>
 <meta charset="UTF-8">
 <title>finderscope</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>finderscope v4: drag to pan</h1>
+<div class="wrap">
 
-<canvas id="skyCanvas" width="700" height="700"></canvas>
+    <header>
+        <h1>finderscope</h1>
+        <p class="subtitle">find it, name it</p>
+    </header>
 
-<div>
-    <label><input type="radio" name="difficulty" value="easy" checked> easy</label>
-    <label><input type="radio" name="difficulty" value="medium"> medium</label>
-    <label><input type="radio" name="difficulty" value="hard"> hard</label>
+    <nav class="segmented" id="modeSwitch">
+        <button class="seg-btn active" id="quizModeBtn" data-mode="quiz">quiz</button>
+        <button class="seg-btn" id="learnModeBtn" data-mode="learn">learn</button>
+    </nav>
+
+    <div class="segmented" id="hemisphereSwitch">
+        <label class="seg-option">
+            <input type="radio" name="hemisphere" value="all" checked>
+            <span>all sky</span>
+        </label>
+        <label class="seg-option">
+            <input type="radio" name="hemisphere" value="north">
+            <span>northern</span>
+        </label>
+        <label class="seg-option">
+            <input type="radio" name="hemisphere" value="south">
+            <span>southern</span>
+        </label>
+    </div>
+
+    <div class="scope">
+        <canvas id="skyCanvas" width="700" height="700"></canvas>
+        <span class="tick tick-n"></span>
+        <span class="tick tick-s"></span>
+        <span class="tick tick-e"></span>
+        <span class="tick tick-w"></span>
+        <span class="crosshair"></span>
+        <span class="corner corner-tl"></span>
+        <span class="corner corner-tr"></span>
+        <span class="corner corner-bl"></span>
+        <span class="corner corner-br"></span>
+    </div>
+
+    <p class="readout" id="label"></p>
+
+    <div id="quizControls" class="panel">
+        <div class="segmented" id="difficultySwitch">
+            <label class="seg-option">
+                <input type="radio" name="difficulty" value="easy" checked>
+                <span>easy</span>
+            </label>
+            <label class="seg-option">
+                <input type="radio" name="difficulty" value="medium">
+                <span>medium</span>
+            </label>
+            <label class="seg-option">
+                <input type="radio" name="difficulty" value="hard">
+                <span>hard</span>
+            </label>
+        </div>
+
+        <div class="guess-row">
+            <input type="text" id="guessInput" placeholder="name the constellation">
+            <button class="btn btn-primary" id="guessBtn">guess</button>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn" id="showAnswerBtn">show answer</button>
+            <button class="btn" id="newRoundBtn">new round</button>
+        </div>
+
+        <p class="feedback" id="feedback"></p>
+    </div>
+
+    <div id="learnControls" class="panel" style="display:none;">
+        <div class="browse-row">
+            <button class="btn" id="prevConsBtn">&larr;</button>
+            <select id="constellationSelect"></select>
+            <button class="btn" id="nextConsBtn">&rarr;</button>
+        </div>
+
+        <p class="feedback" id="learnInfo"></p>
+    </div>
+
 </div>
-
-<input type="text" id="guessInput" placeholder="name the constellation">
-<button id="guessBtn">guess</button>
-<button id="newRoundBtn">new round</button>
-
-<p id="feedback"></p>
-<p id="label"></p>
 
 <script src="data.js"></script>
 <script src="script.js"></script>
