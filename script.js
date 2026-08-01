@@ -2,6 +2,7 @@ const canvas = document.getElementById('skyCanvas');
 const ctx = canvas.getContext('2d');
 const label = document.getElementById('label');
 const feedback = document.getElementById('feedback');
+const statsReadout = document.getElementById('statsReadout');
 const guessInput = document.getElementById('guessInput');
 const guessBtn = document.getElementById('guessBtn');
 const showAnswerBtn = document.getElementById('showAnswerBtn');
@@ -23,7 +24,7 @@ const H = canvas.height;
 
 // how wide the camera fov is, w how far out we bother pulling neighbours from
 const FOV_RADIUS_DEG = 40;
-const INCLUDE_RADIUS_DEG = 55;
+const INCLUDE_RADIUS_DEG = 45; // tested against 55, most of that extra range was landing off-canvas anyway
 
 // fov's fixed so scale never changes, just work it out once
 const SCALE = (0.9 * Math.min(W, H) / 2) / rhoForAngle(FOV_RADIUS_DEG);
@@ -69,10 +70,59 @@ function rhoForAngle(deg)
     return 2 * Math.tan(toRad(deg) / 2);
 }
 
-// grabs every constellation w at least one point inside INCLUDE_RADIUS_DEG of wherever the camera's pointing
+// how close (in degrees) a constellation's actual boundary gets to a point, not just its line-figure vertices
+function boundaryDistance(cons, ra0, dec0)
+{
+    let min = Infinity;
+    for (const ring of cons.bounds)
+    {
+        for (const [ra, dec] of ring)
+        {
+            const d = angularSep(ra, dec, ra0, dec0);
+            if (d < min) min = d;
+        }
+    }
+    return min;
+}
+
+// grabs every constellation whose actual bounded territory comes within INCLUDE_RADIUS_DEG of the camera, closest first
 function findInView(ra0, dec0)
 {
-    return CONSTELLATIONS.filter(cons => cons.lines.some(line => line.some(([ra, dec]) => angularSep(ra, dec, ra0, dec0) <= INCLUDE_RADIUS_DEG)));
+    return CONSTELLATIONS
+        .map(cons => ({ cons, dist: boundaryDistance(cons, ra0, dec0) }))
+        .filter(({ dist }) => dist <= INCLUDE_RADIUS_DEG)
+        .sort((a, b) => a.dist - b.dist);
+}
+
+function drawBoundary(cons, ra0, dec0, color)
+{
+    function toCanvas(ra, dec)
+    {
+        const p = project(ra, dec, ra0, dec0);
+        return {
+            x: W / 2 + p.x * SCALE,
+            y: H / 2 - p.y * SCALE
+        };
+    }
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+
+    for (const ring of cons.bounds)
+    {
+        ctx.beginPath();
+        ring.forEach(([ra, dec], i) =>
+        {
+            const c = toCanvas(ra, dec);
+            if (i === 0) ctx.moveTo(c.x, c.y);
+            else ctx.lineTo(c.x, c.y);
+        });
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    ctx.setLineDash([]); // back to solid for whatever draws next
 }
 
 function drawLines(cons, ra0, dec0, color, lineWidth, showLines)
@@ -115,7 +165,7 @@ function drawLines(cons, ra0, dec0, color, lineWidth, showLines)
     }
 }
 
-// draws whatever's currently in view around (camRA, camDec), target highlighted, rest dimmed
+// draws whatever's currently in view around (camRA, camDec), target highlighted, rest fades w distance
 function drawScene(camRA, camDec, difficulty)
 {
     ctx.clearRect(0, 0, W, H);
@@ -126,13 +176,25 @@ function drawScene(camRA, camDec, difficulty)
     const showNeighbourLines = mode === 'learn' ? true : difficulty !== 'hard';
     const showTargetLines = mode === 'learn' ? true : difficulty === 'easy';
 
-    for (const cons of inView)
+    for (const { cons, dist } of inView)
     {
         const isTarget = cons.id === current.id;
-        const color = isTarget ? '#5a8dee' : '#2e3d5c';
-        const lineWidth = isTarget ? 1.8 : 1;
-        const showLines = isTarget ? showTargetLines : showNeighbourLines;
-        drawLines(cons, camRA, camDec, color, lineWidth, showLines);
+
+        if (isTarget)
+        {
+            drawLines(cons, camRA, camDec, '#5a8dee', 1.8, showTargetLines);
+            continue;
+        }
+
+        // closer neighbours stay clearer, distant ones fade out instead of cluttering the frame at a flat opacity
+        ctx.globalAlpha = Math.max(0.15, 1 - dist / INCLUDE_RADIUS_DEG);
+        drawLines(cons, camRA, camDec, '#2e3d5c', 1, showNeighbourLines);
+        ctx.globalAlpha = 1;
+    }
+
+    if (mode === 'learn')
+    {
+        drawBoundary(current, camRA, camDec, '#d4a15c');
     }
 
     label.textContent = `${inView.length} constellations in frame`;
@@ -161,6 +223,37 @@ function checkGuess(guess, target)
     return g === normalise(target.name) || g === normalise(target.en);
 }
 
+// streak resets on any wrong guess or giving up, best streak w overall accuracy persist across sessions
+const STATS_KEY = 'finderscope_stats';
+let streak = 0;
+
+function loadStats()
+{
+    try
+    {
+        const raw = localStorage.getItem(STATS_KEY);
+        if (raw) return JSON.parse(raw);
+    }
+    catch (e) { /* private browsing or w/e, just start fresh */ }
+
+    return { bestStreak: 0, totalCorrect: 0, totalGuesses: 0 };
+}
+
+function saveStats()
+{
+    try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); }
+    catch (e) { /* not the end of the world if it doesn't persist */ }
+}
+
+function updateStatsDisplay()
+{
+    const accuracy = stats.totalGuesses ? Math.round(100 * stats.totalCorrect / stats.totalGuesses) : 0;
+    statsReadout.textContent = `streak: ${streak} · best: ${stats.bestStreak} · accuracy: ${accuracy}%`;
+}
+
+const stats = loadStats();
+updateStatsDisplay();
+
 let mode = 'quiz';
 let current = pickRandomConstellation();
 let cameraRA = current.center[0];
@@ -179,18 +272,26 @@ function submitGuess()
     if (!guess) return;
 
     feedback.classList.remove('success', 'warn');
+    stats.totalGuesses++;
 
     if (checkGuess(guess, current))
     {
         feedback.textContent = `correct! it's ${current.name} (${current.en})`;
         feedback.classList.add('success');
+        streak++;
+        stats.totalCorrect++;
+        if (streak > stats.bestStreak) stats.bestStreak = streak;
+        autoAdvanceTimer = setTimeout(startNewRound, 2000);
     }
     else
     {
         feedback.textContent = 'nope, try again';
         feedback.classList.add('warn');
+        streak = 0;
     }
 
+    saveStats();
+    updateStatsDisplay();
     guessInput.value = '';
 }
 
@@ -202,18 +303,27 @@ guessInput.addEventListener('keydown', e =>
 
 showAnswerBtn.addEventListener('click', () =>
 {
+    clearTimeout(autoAdvanceTimer);
     feedback.classList.remove('success', 'warn');
     feedback.textContent = `it's ${current.name} (${current.en})`;
+    streak = 0;
+    saveStats();
+    updateStatsDisplay();
 });
 
-newRoundBtn.addEventListener('click', () =>
+let autoAdvanceTimer = null;
+
+function startNewRound()
 {
+    clearTimeout(autoAdvanceTimer); // cancel a pending auto-advance if we're jumping rounds manually
     current = pickRandomConstellation();
     cameraRA = current.center[0];
     cameraDec = current.center[1];
     feedback.textContent = ''; feedback.classList.remove('success', 'warn');
     drawScene(cameraRA, cameraDec, currentDifficulty());
-});
+}
+
+newRoundBtn.addEventListener('click', startNewRound);
 
 // drag to pan, mouse + touch. small angle approx per move, fine since steps are tiny
 let dragging = false;
@@ -295,11 +405,12 @@ function currentHemisphere()
 }
 
 // north/south split just off the sign of the centre's dec, good enough for a browse list
+// uses the real boundary centroid rather than the line-figure centre, fixes edge cases right on the equator (mon, ser cauda)
 function inHemisphere(cons, hemisphere)
 {
     if (hemisphere === 'all') return true;
-    if (hemisphere === 'north') return cons.center[1] >= 0;
-    return cons.center[1] < 0;
+    if (hemisphere === 'north') return cons.boundaryCenter[1] >= 0;
+    return cons.boundaryCenter[1] < 0;
 }
 
 function filteredList()
@@ -370,6 +481,7 @@ nextConsBtn.addEventListener('click', () => stepList(1));
 
 function setMode(newMode)
 {
+    clearTimeout(autoAdvanceTimer);
     mode = newMode;
     const isLearn = mode === 'learn';
     quizControls.style.display = isLearn ? 'none' : 'block';
@@ -384,15 +496,9 @@ function setMode(newMode)
     }
     else
     {
-        current = pickRandomConstellation();
-        cameraRA = current.center[0];
-        cameraDec = current.center[1];
-        feedback.textContent = ''; feedback.classList.remove('success', 'warn');
-        drawScene(cameraRA, cameraDec, currentDifficulty());
+        startNewRound();
     }
 }
 
 quizModeBtn.addEventListener('click', () => setMode('quiz'));
 learnModeBtn.addEventListener('click', () => setMode('learn'));
-
-

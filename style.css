@@ -20,7 +20,7 @@ body
     color: var(--text);
     font-family: 'Space Mono', monospace;
     margin: 0;
-    padding: 40px 20px 80px;
+    padding: 16px 20px 32px;
     display: flex;
     justify-content: center;
 }
@@ -32,7 +32,7 @@ body
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 18px;
+    gap: 10px;
 }
 
 header
@@ -44,16 +44,16 @@ h1
 {
     font-family: 'Syne', sans-serif;
     font-weight: 800;
-    font-size: 2.4rem;
+    font-size: 1.7rem;
     letter-spacing: 0.02em;
     margin: 0;
 }
 
 .subtitle
 {
-    margin: 4px 0 0;
+    margin: 2px 0 0;
     color: var(--text-dim);
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     letter-spacing: 0.15em;
     text-transform: uppercase;
 }
@@ -128,8 +128,7 @@ h1
 .scope
 {
     position: relative;
-    width: 700px;
-    max-width: 100%;
+    width: min(560px, 48vh, 100%);
     aspect-ratio: 1;
 }
 
@@ -199,7 +198,7 @@ canvas
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
 }
 
 .guess-row, .btn-row, .browse-row
