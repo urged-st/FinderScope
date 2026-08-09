@@ -23,12 +23,17 @@ const learnInfo = document.getElementById('learnInfo');
 const W = canvas.width;
 const H = canvas.height;
 
-// how wide the camera fov is, w how far out we bother pulling neighbours from
-const FOV_RADIUS_DEG = 40;
-const INCLUDE_RADIUS_DEG = 45; // tested against 55, most of that extra range was landing off-canvas anyway
+// how wide the camera fov is, w how far out we bother pulling neighbours from. mutable now cus of zoom
+let FOV_RADIUS_DEG = 40;
+const FOV_MIN_DEG = 12;
+const FOV_MAX_DEG = 75;
 
-// fov's fixed so scale never changes, just work it out once
-const SCALE = (0.9 * Math.min(W, H) / 2) / rhoForAngle(FOV_RADIUS_DEG);
+function includeRadius()
+{
+    return FOV_RADIUS_DEG + 5; // tested against a flat 55, most of that extra range was landing off-canvas anyway
+}
+
+let SCALE = (0.9 * Math.min(W, H) / 2) / rhoForAngle(FOV_RADIUS_DEG);
 
 function toRad(deg)
 {
@@ -86,12 +91,12 @@ function boundaryDistance(cons, ra0, dec0)
     return min;
 }
 
-// grabs every constellation whose actual bounded territory comes within INCLUDE_RADIUS_DEG of the camera, closest first
+// grabs every constellation whose actual bounded territory comes within includeRadius() of the camera, closest first
 function findInView(ra0, dec0)
 {
     return CONSTELLATIONS
         .map(cons => ({ cons, dist: boundaryDistance(cons, ra0, dec0) }))
-        .filter(({ dist }) => dist <= INCLUDE_RADIUS_DEG)
+        .filter(({ dist }) => dist <= includeRadius())
         .sort((a, b) => a.dist - b.dist);
 }
 
@@ -188,7 +193,7 @@ function drawScene(camRA, camDec, difficulty)
         }
 
         // closer neighbours stay clearer, distant ones fade out instead of cluttering the frame at a flat opacity
-        ctx.globalAlpha = Math.max(0.15, 1 - dist / INCLUDE_RADIUS_DEG);
+        ctx.globalAlpha = Math.max(0.15, 1 - dist / includeRadius());
         drawLines(cons, camRA, camDec, '#2e3d5c', 1, showNeighbourLines);
         ctx.globalAlpha = 1;
     }
@@ -355,6 +360,13 @@ function panBy(dxPix, dyPix)
     drawScene(cameraRA, cameraDec, currentDifficulty());
 }
 
+// zooming just means a narrower/wider fov, everything else (pan, include radius) already reacts to it live
+function setZoom(newFov)
+{
+    FOV_RADIUS_DEG = Math.max(FOV_MIN_DEG, Math.min(FOV_MAX_DEG, newFov));
+    SCALE = (0.9 * Math.min(W, H) / 2) / rhoForAngle(FOV_RADIUS_DEG);
+    drawScene(cameraRA, cameraDec, currentDifficulty());
+}
 
 function pointerPos(e, isTouch)
 {
@@ -365,6 +377,13 @@ function pointerPos(e, isTouch)
 
 canvas.style.cursor = 'grab';
 
+canvas.addEventListener('wheel', e =>
+{
+    e.preventDefault();
+    // scroll down = zoom out (wider fov), scroll up = zoom in, step scales w current zoom so it doesn't feel jumpy at the extremes
+    const step = FOV_RADIUS_DEG * 0.08;
+    setZoom(FOV_RADIUS_DEG + (e.deltaY > 0 ? step : -step));
+}, { passive: false });
 
 canvas.addEventListener('mousedown', e =>
 {
@@ -390,8 +409,28 @@ window.addEventListener('mouseup', () =>
     canvas.style.cursor = 'grab';
 });
 
+// pinch distance between two touch points, for zoom
+function touchDistance(touches)
+{
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+let pinching = false;
+let lastPinchDist = 0;
+
 canvas.addEventListener('touchstart', e =>
 {
+    if (e.touches.length === 2)
+    {
+        dragging = false;
+        pinching = true;
+        lastPinchDist = touchDistance(e.touches);
+        return;
+    }
+
+    pinching = false;
     dragging = true;
     const p = pointerPos(e, true);
     lastX = p.x;
@@ -400,8 +439,19 @@ canvas.addEventListener('touchstart', e =>
 
 canvas.addEventListener('touchmove', e =>
 {
+    e.preventDefault(); // stop the page scrolling while dragging/pinching the sky
+
+    if (pinching && e.touches.length === 2)
+    {
+        const dist = touchDistance(e.touches);
+        // fingers spreading apart = zooming in (narrower fov), pinching together = zooming out
+        const ratio = lastPinchDist / dist;
+        setZoom(FOV_RADIUS_DEG * ratio);
+        lastPinchDist = dist;
+        return;
+    }
+
     if (!dragging) return;
-    e.preventDefault(); // stop the page scrolling while dragging the sky
     const p = pointerPos(e, true);
     panBy(p.x - lastX, p.y - lastY);
     lastX = p.x;
@@ -411,6 +461,7 @@ canvas.addEventListener('touchmove', e =>
 window.addEventListener('touchend', () =>
 {
     dragging = false;
+    pinching = false;
 });
 
 // learn mode: hemisphere filter + browsable list, reuses the same camera/draw engine as quiz mode
