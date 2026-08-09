@@ -5,6 +5,7 @@ const feedback = document.getElementById('feedback');
 const statsReadout = document.getElementById('statsReadout');
 const guessInput = document.getElementById('guessInput');
 const guessBtn = document.getElementById('guessBtn');
+const giveUpBtn = document.getElementById('giveUpBtn');
 const showAnswerBtn = document.getElementById('showAnswerBtn');
 const newRoundBtn = document.getElementById('newRoundBtn');
 const difficultyInputs = document.querySelectorAll('input[name="difficulty"]');
@@ -313,6 +314,18 @@ showAnswerBtn.addEventListener('click', () =>
 
 let autoAdvanceTimer = null;
 
+giveUpBtn.addEventListener('click', () =>
+{
+    clearTimeout(autoAdvanceTimer);
+    feedback.classList.remove('success', 'warn');
+    feedback.textContent = `it's ${current.name} (${current.en})`;
+    feedback.classList.add('warn');
+    streak = 0;
+    saveStats();
+    updateStatsDisplay();
+    autoAdvanceTimer = setTimeout(startNewRound, 2000);
+});
+
 function startNewRound()
 {
     clearTimeout(autoAdvanceTimer); // cancel a pending auto-advance if we're jumping rounds manually
@@ -342,6 +355,7 @@ function panBy(dxPix, dyPix)
     drawScene(cameraRA, cameraDec, currentDifficulty());
 }
 
+
 function pointerPos(e, isTouch)
 {
     const rect = canvas.getBoundingClientRect();
@@ -350,6 +364,7 @@ function pointerPos(e, isTouch)
 }
 
 canvas.style.cursor = 'grab';
+
 
 canvas.addEventListener('mousedown', e =>
 {

@@ -263,6 +263,20 @@ input[type="text"]:focus, select:focus
     opacity: 0.9;
 }
 
+.btn-giveup
+{
+    margin-left: 18px;
+    color: var(--text-dim);
+    border-color: transparent;
+    background: transparent;
+}
+
+.btn-giveup:hover
+{
+    color: var(--warn);
+    border-color: var(--warn);
+}
+
 .feedback
 {
     min-height: 1.2em;
