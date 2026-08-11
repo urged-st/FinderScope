@@ -287,3 +287,24 @@ input[type="text"]:focus, select:focus
 
 .feedback.success { color: var(--success); }
 .feedback.warn { color: var(--warn); }
+
+.timer
+{
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2.2rem;
+    margin: 0;
+    color: var(--text);
+}
+
+.timer.flash
+{
+    color: var(--warn);
+    animation: pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes pulse
+{
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}

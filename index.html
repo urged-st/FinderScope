@@ -20,6 +20,7 @@
     <nav class="segmented" id="modeSwitch">
         <button class="seg-btn active" id="quizModeBtn" data-mode="quiz">quiz</button>
         <button class="seg-btn" id="learnModeBtn" data-mode="learn">learn</button>
+        <button class="seg-btn" id="testModeBtn" data-mode="test">test</button>
     </nav>
 
     <div class="segmented" id="hemisphereSwitch">
@@ -34,6 +35,21 @@
         <label class="seg-option">
             <input type="radio" name="hemisphere" value="south">
             <span>southern</span>
+        </label>
+    </div>
+
+    <div class="segmented" id="difficultySwitch">
+        <label class="seg-option">
+            <input type="radio" name="difficulty" value="easy" checked>
+            <span>easy</span>
+        </label>
+        <label class="seg-option">
+            <input type="radio" name="difficulty" value="medium">
+            <span>medium</span>
+        </label>
+        <label class="seg-option">
+            <input type="radio" name="difficulty" value="hard">
+            <span>hard</span>
         </label>
     </div>
 
@@ -55,30 +71,10 @@
     <div id="quizControls" class="panel">
         <p class="readout" id="statsReadout"></p>
 
-        <div class="segmented" id="difficultySwitch">
-            <label class="seg-option">
-                <input type="radio" name="difficulty" value="easy" checked>
-                <span>easy</span>
-            </label>
-            <label class="seg-option">
-                <input type="radio" name="difficulty" value="medium">
-                <span>medium</span>
-            </label>
-            <label class="seg-option">
-                <input type="radio" name="difficulty" value="hard">
-                <span>hard</span>
-            </label>
-        </div>
-
         <div class="guess-row">
             <input type="text" id="guessInput" placeholder="name the constellation">
             <button class="btn btn-primary" id="guessBtn">guess</button>
             <button class="btn btn-giveup" id="giveUpBtn">give up</button>
-        </div>
-
-        <div class="btn-row">
-            <button class="btn" id="showAnswerBtn">show answer</button>
-            <button class="btn" id="newRoundBtn">new round</button>
         </div>
 
         <p class="feedback" id="feedback"></p>
@@ -92,6 +88,20 @@
         </div>
 
         <p class="feedback" id="learnInfo"></p>
+    </div>
+
+    <div id="testControls" class="panel" style="display:none;">
+        <p class="readout" id="testStatus"></p>
+        <p class="timer" id="testTimer"></p>
+
+        <button class="btn btn-primary" id="startTestBtn">start test</button>
+
+        <div class="guess-row" id="testGuessRow" style="display:none;">
+            <input type="text" id="testGuessInput" placeholder="name the constellation">
+            <button class="btn btn-primary" id="testGuessBtn">guess</button>
+        </div>
+
+        <p class="feedback" id="testFeedback"></p>
     </div>
 
 </div>
